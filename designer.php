@@ -3,7 +3,6 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 require_once 'includes/functions.php';
 
-// Fix Variabel Global
 $message = '';
 $s = [];
 $template_data = [];
@@ -19,7 +18,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $logo_width = (int)($_POST['logo_width'] ?? 100);
     $footer_width = (int)($_POST['footer_width'] ?? 100);
     $global_font_size = (int)($_POST['global_font_size'] ?? 12);
-    $global_spacing = (int)($_POST['global_spacing'] ?? 0);
+    $font_family = $_POST['font_family'] ?? 'Consolas'; // Global Default Font
+    
+    // [BARU] Simpan Margin
+    $margin_top = (int)($_POST['margin_top'] ?? 0);
+    $margin_bottom = (int)($_POST['margin_bottom'] ?? 0);
+    $margin_left = (int)($_POST['margin_left'] ?? 0);
+    $margin_right = (int)($_POST['margin_right'] ?? 0);
 
     $existing_structure = [];
     if ($template_id > 0) {
@@ -39,7 +44,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'footer_width' => $footer_width, 
             'footer_path' => $existing_structure['footer_path'] ?? null,
             'font_size' => $global_font_size,
-            'spacing_top' => $global_spacing
+            'font_family' => $font_family,
+            // Margin Global
+            'margin_top' => $margin_top,
+            'margin_bottom' => $margin_bottom,
+            'margin_left' => $margin_left,
+            'margin_right' => $margin_right
         ];
 
         $logo_path = null; $is_update = $template_id > 0;
@@ -108,110 +118,70 @@ require_once 'includes/header.php';
 ?>
 
 <style>
-    /* UI STYLES */
+    /* IMPORT GOOGLE FONTS */
+    @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inconsolata:wght@400;700&display=swap');
+
     .workspace-wrapper { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: #f1f5f9; padding: 20px; height: calc(100vh - 100px); }
     .designer-grid { display: grid; grid-template-columns: 280px 1fr 380px; gap: 20px; height: 100%; overflow: hidden; }
-    
     .panel-card { background: #fff; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); border: 1px solid #cbd5e1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
-    
-    /* Tabs - No Focus Steal on Click */
     .panel-tabs { display: flex; border-bottom: 1px solid #e2e8f0; background: #f8fafc; }
     .panel-tab-btn { flex: 1; padding: 12px 5px; font-size: 0.75rem; font-weight: 700; color: #64748b; background: none; border: none; border-bottom: 3px solid transparent; cursor: pointer; transition: 0.2s; text-transform: uppercase; user-select: none; }
     .panel-tab-btn:hover { background: #f1f5f9; color: #334155; }
     .panel-tab-btn.active { background: #fff; color: var(--primary); border-bottom-color: var(--primary); }
-    
     .panel-content { padding: 20px; overflow-y: auto; flex: 1; display: none; }
     .panel-content.active { display: block; animation: fadeIn 0.2s; }
-
     .form-group { margin-bottom: 15px; }
     .form-label { display: block; margin-bottom: 5px; font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase; user-select: none; }
     .form-control { width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.85rem; background: #f8fafc; transition: 0.2s; box-sizing: border-box; }
     .form-control:focus { outline: none; border-color: var(--primary); background: #fff; }
-
-    /* Custom Dropdown */
     .custom-select-wrapper { position: relative; width: 100%; user-select: none; }
-    .custom-select-trigger {
-        display: flex; justify-content: space-between; align-items: center;
-        width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px;
-        background: #f8fafc; font-size: 0.85rem; color: #334155; cursor: pointer;
-        box-sizing: border-box;
-    }
+    .custom-select-trigger { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; background: #f8fafc; font-size: 0.85rem; color: #334155; cursor: pointer; box-sizing: border-box; }
     .custom-select-trigger:hover { background: #fff; border-color:#94a3b8; }
-    .custom-options {
-        position: absolute; top: 100%; left: 0; right: 0;
-        background: #fff; border: 1px solid #cbd5e1; border-radius: 6px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 100;
-        display: none; max-height: 200px; overflow-y: auto;
-    }
+    .custom-options { position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1px solid #cbd5e1; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 100; display: none; max-height: 200px; overflow-y: auto; }
     .custom-options.open { display: block; }
     .custom-option { padding: 8px 10px; font-size: 0.85rem; color: #334155; cursor: pointer; }
     .custom-option:hover { background: #f1f5f9; color: var(--primary); }
-
     .prop-row { display: flex; gap: 10px; margin-bottom: 12px; align-items: center; }
     .prop-col { flex: 1; display: flex; flex-direction: column; }
     .input-icon-group { position: relative; display: flex; align-items: center; }
     .input-icon { position: absolute; left: 8px; font-size: 0.8rem; color: #94a3b8; pointer-events: none; }
     .input-with-icon { padding-left: 28px; text-align: left; font-weight: 600; color: #334155; }
-    
     .icon-toolbar { display: flex; gap: 5px; background: #f1f5f9; padding: 4px; border-radius: 6px; border: 1px solid #e2e8f0; margin-bottom: 15px; }
     .icon-btn { flex: 1; border: none; background: transparent; padding: 6px; border-radius: 4px; cursor: pointer; color: #64748b; font-size: 0.9rem; transition: 0.1s; display: flex; justify-content: center; align-items: center; user-select: none; }
     .icon-btn:hover { background: #fff; color: #334155; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
     .icon-btn.active { background: #fff; color: var(--primary); font-weight: bold; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-
     .btn-save { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 6px; width: 100%; font-weight: 600; cursor: pointer; margin-top: 15px; }
     .btn-save:hover { background: var(--primary-hover); }
-
     .col-editor { position: relative; }
     .editor-toolbar { padding: 10px 15px; background: #fff; border-bottom: 1px solid #e2e8f0; display: flex; gap: 8px; align-items: center; user-select: none; }
     .tool-btn { background: #fff; border: 1px solid #cbd5e1; padding: 5px 10px; border-radius: 4px; font-size: 0.8rem; cursor: pointer; color: #475569; }
-    .tool-btn, .icon-btn, .panel-tab-btn, .custom-select-trigger, .custom-option { user-select: none; }
-
+    .tool-btn, .icon-btn, .panel-tab-btn { user-select: none; }
     #editor { flex: 1; width: 100%; padding: 25px; border: none; font-family: 'Consolas', monospace; font-size: 13px; line-height: 1.6; resize: none; outline: none; color: #334155; white-space: pre; overflow-x: auto; }
-
     .col-preview { background: #e2e8f0; padding: 30px; display: block; overflow-y: auto; text-align: center; }
-    
-    /* === PERBAIKAN CSS PREVIEW === */
-    .preview-paper { 
-        background: white; 
-        /* Lebar akan di-handle via JS menggunakan satuan mm */
-        display: inline-block; 
-        text-align: left; 
-        min-height: 200px; 
-        /* Samakan padding dengan print-preview.php (5mm) */
-        padding: 5mm; 
-        box-shadow: 0 10px 25px -5px rgba(0,0,0,0.2); 
-        margin-bottom: 50px; 
-        /* Pastikan padding tidak melebarkan kertas */
-        box-sizing: border-box; 
-        
-        font-family: 'Consolas', monospace; 
-        /* Default size awal */
-        font-size: 12px; 
-        color: #000;
-        white-space: pre-wrap; 
-        word-wrap: break-word; 
-        transition: width 0.3s;
-        
-        /* Opsional: Efek zoom agar di monitor terlihat jelas seperti kertas asli */
-        transform-origin: top center;
-    }
-
+    .preview-paper { background: white; display: inline-block; text-align: left; min-height: 200px; padding: 5mm; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.2); margin-bottom: 50px; box-sizing: border-box; font-family: 'Consolas', monospace; font-size: 12px; color: #000; white-space: pre-wrap; word-wrap: break-word; transition: width 0.3s; transform-origin: top center; }
     .preview-line { position: relative; display: block; width: 100%; min-height: 1em; }
     .split-line { display: flex; justify-content: space-between; }
-
-    .cs-overlay {
-        position: absolute; top: 55px; left: 15px; width: 500px; 
-        background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; 
-        box-shadow: 0 20px 40px -5px rgba(0,0,0,0.15); 
-        z-index: 999; display: none; flex-direction: column;
-    }
+    .cs-overlay { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 700px; max-width: 95vw; height: 600px; max-height: 90vh; background: #fff; border: 1px solid #cbd5e1; border-radius: 12px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.3); z-index: 9999; display: none; flex-direction: column; overflow: hidden; }
     .cs-overlay.active { display: flex; animation: fadeIn 0.2s; }
-    .cs-header { padding: 10px 15px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; font-weight:bold; color:#475569;}
-    .cs-body { padding: 15px; max-height: 300px; overflow-y: auto; }
-    .guide-tbl { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
-    .guide-tbl td { padding: 6px 0; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
-    .pill { background: #eff6ff; color: #2563eb; padding: 2px 6px; border-radius: 4px; font-family: monospace; border: 1px solid #dbeafe; font-size: 0.75rem; font-weight: 600; display: inline-block; margin-right:5px; }
-
+    .cs-header { padding: 15px 20px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; font-weight:700; color:#1e293b; }
+    .cs-tabs { display: flex; background: #fff; border-bottom: 1px solid #e2e8f0; overflow-x: auto; }
+    .cs-tab { padding: 12px 20px; font-size: 0.9rem; font-weight: 600; color: #64748b; cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; transition:0.2s; }
+    .cs-tab:hover { background: #f1f5f9; color:#334155; }
+    .cs-tab.active { color: var(--primary); border-bottom-color: var(--primary); background: #f0f9ff; }
+    .cs-body { flex: 1; overflow-y: auto; padding: 0; background: #fff; scrollbar-width: thin; scrollbar-color: #cbd5e1 #f1f5f9; }
+    .cs-body::-webkit-scrollbar { width: 8px; }
+    .cs-body::-webkit-scrollbar-track { background: #f1f5f9; }
+    .cs-body::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 4px; border: 2px solid #f1f5f9; }
+    .cs-panel { display: none; padding: 25px; }
+    .cs-panel.active { display: block; }
+    .code-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; color: #334155; }
+    .code-table th { text-align: left; padding: 10px; border-bottom: 2px solid #e2e8f0; color: #475569; font-size: 0.8rem; text-transform: uppercase; background:#f8fafc; position:sticky; top:-25px; z-index:10; }
+    .code-table td { padding: 12px 10px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+    .pill { background: #eff6ff; color: #2563eb; padding: 4px 8px; border-radius: 6px; font-family: 'Consolas', monospace; border: 1px solid #bfdbfe; font-size: 0.85rem; font-weight: 600; display: inline-block; }
+    .pill-desc { color: #475569; font-size: 0.85rem; margin-top: 5px; line-height: 1.5; }
+    .pill-ex { color: #059669; font-family: 'Consolas', monospace; font-size: 0.8rem; display: block; margin-top: 5px; background:#ecfdf5; padding:6px; border-radius:6px; border:1px solid #d1fae5; }
+    .code-category { font-weight:800; color:#1e293b; margin-top:25px; margin-bottom:10px; border-bottom:2px solid #e2e8f0; padding-bottom:8px; font-size:1rem; letter-spacing:0.5px; }
     .toast { position: fixed; top: 80px; right: 20px; padding: 12px 20px; background: #10b981; color: white; border-radius: 8px; z-index: 2000; animation: fadeOut 3s forwards; }
     @keyframes fadeOut { to { opacity: 0; visibility: hidden; } }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
@@ -238,6 +208,25 @@ require_once 'includes/header.php';
                         <option value="58mm" <?= ($template_data['paper_size']??'80mm')==='58mm'?'selected':'' ?>>58mm (Kecil)</option>
                     </select>
                 </div>
+                <div class="form-group"><label class="form-label">Font Default (Global)</label>
+                    <select name="font_family" id="globalFontSelect" class="form-control">
+                        <option value="Consolas" <?= ($s['font_family']??'Consolas')==='Consolas'?'selected':'' ?>>Consolas (Default)</option>
+                        <option value="VT323" <?= ($s['font_family']??'Consolas')==='VT323'?'selected':'' ?>>Indomaret (VT323)</option>
+                        <option value="Inconsolata" <?= ($s['font_family']??'Consolas')==='Inconsolata'?'selected':'' ?>>Thermal Modern</option>
+                        <option value="Courier New" <?= ($s['font_family']??'Consolas')==='Courier New'?'selected':'' ?>>Courier New</option>
+                        <option value="Arial" <?= ($s['font_family']??'Consolas')==='Arial'?'selected':'' ?>>Arial</option>
+                    </select>
+                </div>
+                
+                <div class="prop-row">
+                    <div class="prop-col"><label class="form-label">Margin Atas</label><input type="number" name="margin_top" id="inputMarginTop" value="<?= $s['margin_top'] ?? 0 ?>" class="form-control" placeholder="0"></div>
+                    <div class="prop-col"><label class="form-label">Margin Bawah</label><input type="number" name="margin_bottom" id="inputMarginBottom" value="<?= $s['margin_bottom'] ?? 0 ?>" class="form-control" placeholder="0"></div>
+                </div>
+                <div class="prop-row">
+                    <div class="prop-col"><label class="form-label">Margin Kiri</label><input type="number" name="margin_left" id="inputMarginLeft" value="<?= $s['margin_left'] ?? 0 ?>" class="form-control" placeholder="0"></div>
+                    <div class="prop-col"><label class="form-label">Margin Kanan</label><input type="number" name="margin_right" id="inputMarginRight" value="<?= $s['margin_right'] ?? 0 ?>" class="form-control" placeholder="0"></div>
+                </div>
+
                 <div class="prop-row">
                     <div class="prop-col"><label class="form-label">Logo (px)</label><div class="input-icon-group"><i class="fas fa-ruler-horizontal input-icon"></i><input type="number" name="logo_width" id="inputLogoWidth" value="<?= $s['logo_width'] ?? 100 ?>" class="form-control input-with-icon"></div></div>
                     <div class="prop-col"><label class="form-label">Upload</label><input type="file" name="logo" accept="image/*" class="form-control" style="padding:6px; font-size:0.7rem;"></div>
@@ -248,7 +237,6 @@ require_once 'includes/header.php';
                 </div>
                 <div class="prop-row">
                     <div class="prop-col"><label class="form-label">Default Size</label><div class="input-icon-group"><i class="fas fa-text-height input-icon"></i><input type="number" name="global_font_size" id="globalFontSize" value="<?= $s['font_size'] ?? 12 ?>" class="form-control input-with-icon"></div></div>
-                    <div class="prop-col"><label class="form-label">Padding Top</label><div class="input-icon-group"><i class="fas fa-arrow-down input-icon"></i><input type="number" name="global_spacing" id="globalSpacing" value="<?= $s['spacing_top'] ?? 0 ?>" class="form-control input-with-icon"></div></div>
                 </div>
                 <div style="flex:1;"></div>
                 <button type="submit" class="btn-save"><i class="fas fa-save"></i> SIMPAN DESAIN</button>
@@ -256,16 +244,17 @@ require_once 'includes/header.php';
 
             <div class="panel-content" id="tab-char">
                 <div class="form-group">
-                    <label class="form-label">Font Family</label>
+                    <label class="form-label">Font Family (Per Baris)</label>
                     <div class="custom-select-wrapper">
                         <div class="custom-select-trigger js-prevent-focus" id="fontTrigger">
-                            <span id="fontDisplay">Consolas</span><i class="fas fa-chevron-down" style="font-size:0.7rem;"></i>
+                            <span id="fontDisplay">Ganti Font Blok...</span><i class="fas fa-chevron-down" style="font-size:0.7rem;"></i>
                         </div>
                         <div class="custom-options" id="fontOptions">
                             <div class="custom-option js-prevent-focus" data-val="Consolas">Consolas</div>
-                            <div class="custom-option js-prevent-focus" data-val="Arial">Arial</div>
+                            <div class="custom-option js-prevent-focus" data-val="VT323">Indomaret (VT323)</div>
+                            <div class="custom-option js-prevent-focus" data-val="Inconsolata">Thermal Modern</div>
                             <div class="custom-option js-prevent-focus" data-val="Courier New">Courier New</div>
-                            <div class="custom-option js-prevent-focus" data-val="Tahoma">Tahoma</div>
+                            <div class="custom-option js-prevent-focus" data-val="Arial">Arial</div>
                         </div>
                     </div>
                 </div>
@@ -307,12 +296,16 @@ require_once 'includes/header.php';
                     <div class="prop-col"><label class="form-label">Space Before</label><input type="number" id="paraMT" class="form-control" placeholder="0"></div>
                     <div class="prop-col"><label class="form-label">Space After</label><input type="number" id="paraMB" class="form-control" placeholder="0"></div>
                 </div>
+                <label class="form-label">Special</label>
+                <div class="editor-toolbar">
+                    <button type="button" class="tool-btn js-prevent-focus" onmousedown="event.preventDefault(); insertText('[TAB]')" title="Insert Tab"><i class="fas fa-long-arrow-alt-right"></i> TAB</button>
+                </div>
             </div>
         </aside>
 
         <main class="panel-card col-editor">
             <div class="editor-toolbar">
-                <button type="button" class="tool-btn btn-text js-prevent-focus" onmousedown="event.preventDefault(); toggleCheatSheet()" style="background:#eff6ff; color:#2563eb; border-color:#bfdbfe;"><i class="fas fa-book"></i> Kamus Kode</button>
+                <button type="button" class="tool-btn btn-text js-prevent-focus" onmousedown="event.preventDefault(); toggleCheatSheet()" style="background:#eff6ff; color:#2563eb; border-color:#bfdbfe;"><i class="fas fa-book"></i> Kamus Kode Lengkap</button>
                 <div style="border-left:1px solid #e2e8f0; height:20px; margin:0 5px;"></div>
                 <button type="button" class="tool-btn js-prevent-focus" onmousedown="event.preventDefault(); insertText('[LOGO]')" title="Logo"><i class="far fa-image"></i> Logo</button>
                 <button type="button" class="tool-btn js-prevent-focus" onmousedown="event.preventDefault(); insertText('[QR]')" title="QR"><i class="fas fa-qrcode"></i> QR</button>
@@ -321,12 +314,108 @@ require_once 'includes/header.php';
             <textarea name="custom_template" id="editor" placeholder="Ketik struktur struk..." spellcheck="false"><?= htmlspecialchars($s['content'] ?? '') ?></textarea>
             
             <div id="cheatSheet" class="cs-overlay">
-                <div class="cs-header"><span><i class="fas fa-code"></i> Referensi Kode</span><button type="button" class="js-prevent-focus" onmousedown="event.preventDefault(); toggleCheatSheet()" style="background:none;border:none;cursor:pointer;color:#64748b;"><i class="fas fa-times"></i></button></div>
+                <div class="cs-header">
+                    <span><i class="fas fa-code"></i> Kamus Kode Lengkap</span>
+                    <button type="button" class="js-prevent-focus" onmousedown="event.preventDefault(); toggleCheatSheet()" style="background:none;border:none;cursor:pointer;color:#64748b;font-size:1.1rem;"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="cs-tabs">
+                    <div class="cs-tab active" onclick="switchCsTab('cs-vars')">Data Input</div>
+                    <div class="cs-tab" onclick="switchCsTab('cs-format')">Format Text</div>
+                    <div class="cs-tab" onclick="switchCsTab('cs-datetime')">Tgl & Waktu</div>
+                    <div class="cs-tab" onclick="switchCsTab('cs-advanced')">Fitur Canggih</div>
+                </div>
                 <div class="cs-body">
-                    <table class="guide-tbl">
-                        <tr><td><span class="pill">{{var}}</span> Input</td><td><span class="pill">{{^var}}</span> Kapital</td></tr>
-                        <tr><td><span class="pill">{{$$var}}</span> Rupiah</td><td><span class="pill">{{@t}}</span> Tanggal</td></tr>
-                    </table>
+                    <div id="cs-vars" class="cs-panel active">
+                        <table class="code-table">
+                            <tr><th>Kode</th><th>Deskripsi</th></tr>
+                            <tr><td><span class="pill">{{nama}}</span></td><td><div class="pill-desc">Input teks biasa. Variabel 'nama' akan muncul di form input.</div></td></tr>
+                            <tr><td><span class="pill">{{!id}}</span></td><td><div class="pill-desc"><strong>Hidden Input:</strong> Wajib diisi (atau otomatis) tapi tidak dicetak di kertas struk. Berguna untuk QR code.</div></td></tr>
+                            <tr><td><span class="pill">{{ [1] nama }}</span></td><td><div class="pill-desc"><strong>Sorting:</strong> Mengatur urutan input di form. Angka [1] akan muncul paling atas.</div></td></tr>
+                            <tr><td><span class="pill">{{nama(10)}}</span></td><td><div class="pill-desc"><strong>Max Length:</strong> Membatasi input maksimal 10 karakter.</div></td></tr>
+                            <tr><td><span class="pill">{{^nama}}</span></td><td><div class="pill-desc"><strong>UPPERCASE:</strong> Otomatis ubah input menjadi huruf besar semua.</div></td></tr>
+                            <tr><td><span class="pill">{{*nama}}</span></td><td><div class="pill-desc"><strong>Title Case:</strong> Huruf besar di awal setiap kata.</div></td></tr>
+                        </table>
+                    </div>
+
+                    <div id="cs-format" class="cs-panel">
+                        <table class="code-table">
+                            <tr><th>Kode</th><th>Deskripsi</th></tr>
+                            <tr><td><span class="pill">[TAB]</span></td><td><div class="pill-desc">Membuat jarak spasi lebar (4 spasi) di tengah baris.</div></td></tr>
+                            <tr><td><span class="pill">[TAB:8]</span></td><td><div class="pill-desc">Membuat jarak spasi khusus (misal 8 spasi).</div></td></tr>
+                            <tr><td><span class="pill">{{$harga}}</span></td><td><div class="pill-desc">Format angka dengan pemisah ribuan (koma).<br><span class="pill-ex">Input: 50000 -> Cetak: 50,000</span></div></td></tr>
+                            <tr><td><span class="pill">{{$$harga}}</span></td><td><div class="pill-desc">Format Rupiah lengkap.<br><span class="pill-ex">Input: 50000 -> Cetak: Rp. 50.000</span></div></td></tr>
+                            <tr><td><span class="pill">[B] Teks [B]</span></td><td><div class="pill-desc">Membuat teks menjadi <strong>Tebal (Bold)</strong>.</div></td></tr>
+                            <tr><td><span class="pill">[I] Teks [I]</span></td><td><div class="pill-desc">Membuat teks menjadi <em>Miring (Italic)</em>.</div></td></tr>
+                            <tr><td><span class="pill">[C] Teks</span></td><td><div class="pill-desc">Rata Tengah (Center).</div></td></tr>
+                            <tr><td><span class="pill">[R] Teks</span></td><td><div class="pill-desc">Rata Kanan (Right).</div></td></tr>
+                            <tr><td><span class="pill">Kiri [R] Kanan</span></td><td><div class="pill-desc">Split Column: Teks 'Kiri' di kiri, 'Kanan' mentok di kanan.</div></td></tr>
+                        </table>
+                    </div>
+
+                    <div id="cs-datetime" class="cs-panel">
+                        <table class="code-table">
+                            <tr><th>Kode</th><th>Output Contoh</th></tr>
+                            <tr><td><span class="pill">{{@tgl}}</span></td><td><div class="pill-desc">20/05/2025</div></td></tr>
+                            <tr><td><span class="pill">{{@@tgl}}</span></td><td><div class="pill-desc">20.05.25 (Singkat)</div></td></tr>
+                            <tr><td><span class="pill">{{@@@tgl}}</span></td><td><div class="pill-desc">20 Mei 2025 (Indo Lengkap)</div></td></tr>
+                            <tr><td><span class="pill">{{@:my tgl}}</span></td><td><div class="pill-desc">Mei 2025 (Custom)</div></td></tr>
+                            <tr><td><span class="pill">{{%jam}}</span></td><td><div class="pill-desc">14:30 (Jam:Menit)</div></td></tr>
+                            <tr><td><span class="pill">{{%%jam}}</span></td><td><div class="pill-desc">14:30:59 (Full Detik)</div></td></tr>
+                        </table>
+                        <div style="padding:10px; background:#f1f5f9; border-radius:6px; margin-top:10px; font-size:0.8rem; color:#64748b;">
+                            <i class="fas fa-info-circle"></i> Jika input dikosongkan, otomatis terisi tanggal/jam saat ini.
+                        </div>
+                    </div>
+
+                    <div id="cs-advanced" class="cs-panel">
+                        <div class="code-category">SMART INDENT (Word Wrap)</div>
+                        <table class="code-table">
+                            <tr>
+                                <td style="width:40%"><span class="pill">{{ ##Total|Potong|Indent var }}</span></td>
+                                <td>
+                                    <div class="pill-desc">Memecah teks panjang menjadi beberapa baris secara otomatis dengan indentasi rapi.</div>
+                                    <span class="pill-ex">{{ ##100|20|5 catatan }}</span>
+                                    <div style="font-size:0.75rem; color:#64748b; margin-top:5px;">
+                                        • <strong>100</strong>: Panjang max input (untuk dummy)<br>
+                                        • <strong>20</strong>: Potong baris setiap 20 karakter<br>
+                                        • <strong>5</strong>: Jumlah spasi indentasi di baris baru
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <div class="code-category">MASKING & PATTERN</div>
+                        <table class="code-table">
+                            <tr>
+                                <td style="width:40%"><span class="pill">{{ ?POLA input }}</span></td>
+                                <td>
+                                    <div class="pill-desc">Membuat ID acak sesuai pola huruf/angka.</div>
+                                    <span class="pill-ex">{{ ?AA-000 kode }}</span>
+                                    <div style="font-size:0.75rem; color:#64748b; margin-top:5px;">
+                                        • <strong>A</strong> = Huruf Acak (A-Z)<br>
+                                        • <strong>0</strong> = Angka Acak (0-9)<br>
+                                        Output: <strong>KF-839</strong>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><span class="pill">{{ #6 kode }}</span></td>
+                                <td><div class="pill-desc">Generate 6 digit <strong>Angka</strong> acak.</div></td>
+                            </tr>
+                            <tr>
+                                <td><span class="pill">{{ ##6 kode }}</span></td>
+                                <td><div class="pill-desc">Generate 6 digit <strong>Huruf & Angka</strong> acak.</div></td>
+                            </tr>
+                        </table>
+
+                        <div class="code-category">FORMULA MATEMATIKA</div>
+                        <table class="code-table">
+                            <tr>
+                                <td><span class="pill">{{ total = qty * harga }}</span></td>
+                                <td><div class="pill-desc">Hitung otomatis. Support +, -, *, /</div></td>
+                            </tr>
+                        </table>
+                    </div>
                 </div>
             </div>
         </main>
@@ -344,13 +433,18 @@ require_once 'includes/header.php';
     const editor = document.getElementById('editor');
     const previewContainer = document.getElementById('previewContainer');
     const paperSizeSelect = document.getElementById('paperSizeSelect');
+    const globalFontSelect = document.getElementById('globalFontSelect');
     
     const inputLogoWidth = document.getElementById('inputLogoWidth');
     const inputFooterWidth = document.getElementById('inputFooterWidth');
     const globalFontSize = document.getElementById('globalFontSize');
-    const globalSpacing = document.getElementById('globalSpacing');
+    
+    // Margin Inputs
+    const inputMarginTop = document.getElementById('inputMarginTop');
+    const inputMarginBottom = document.getElementById('inputMarginBottom');
+    const inputMarginLeft = document.getElementById('inputMarginLeft');
+    const inputMarginRight = document.getElementById('inputMarginRight');
 
-    // === MEMORY STATE: THE CRITICAL FIX ===
     let lastSel = { start: 0, end: 0 };
 
     function saveSel() {
@@ -370,7 +464,6 @@ require_once 'includes/header.php';
         editor.setSelectionRange(lastSel.start, lastSel.end);
     }
 
-    // === ATTACH LISTENERS TO INPUTS (MANUAL) ===
     function attachInputListeners() {
         const map = {
             'charSize': 'S', 'charLead': 'LH', 'charTrack': 'TR', 
@@ -416,7 +509,6 @@ require_once 'includes/header.php';
         }
     });
 
-    // === UI SWITCH ===
     function switchTab(id) {
         document.querySelectorAll('.panel-content').forEach(el => el.classList.remove('active'));
         document.querySelectorAll('.panel-tab-btn').forEach(el => el.classList.remove('active'));
@@ -424,16 +516,23 @@ require_once 'includes/header.php';
         event.target.classList.add('active');
         restoreSelection(); 
     }
+
     function toggleCheatSheet() {
         const cs = document.getElementById('cheatSheet');
         cs.style.display = (cs.style.display === 'flex') ? 'none' : 'flex';
+    }
+
+    function switchCsTab(tabId) {
+        document.querySelectorAll('.cs-tab').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.cs-panel').forEach(el => el.classList.remove('active'));
+        event.target.classList.add('active');
+        document.getElementById(tabId).classList.add('active');
     }
 
     // === ENGINE: BLOCK PROCESSOR ===
     function applyBlockTag(key, val = null, fromInput = false) {
         let start = lastSel.start;
         let end = lastSel.end;
-        const wasSelection = (start !== end);
         const text = editor.value;
 
         const rangeStart = text.lastIndexOf('\n', start - 1) + 1;
@@ -462,6 +561,7 @@ require_once 'includes/header.php';
                 if (currentLine.includes(t)) currentLine = currentLine.replace(t, "");
                 else currentLine = t + currentLine;
             }
+            // Tag Params Logic with Negative Support
             else if (['F','S','LH','TR','HS','BS','IL','IR','MT','MB'].includes(key)) {
                 let regex = new RegExp(`\\[${key}:[^\\]]+\\]\\s*`, 'g');
                 currentLine = currentLine.replace(regex, "");
@@ -483,11 +583,7 @@ require_once 'includes/header.php';
             lastSel = { start: rangeStart, end: newEndPos };
             editor.setSelectionRange(rangeStart, newEndPos);
         } else {
-            if (wasSelection) {
-                lastSel = { start: rangeStart, end: newEndPos };
-            } else {
-                lastSel = { start: newEndPos, end: newEndPos };
-            }
+            lastSel = { start: newEndPos, end: newEndPos };
             restoreSelection();
         }
         update();
@@ -526,22 +622,24 @@ require_once 'includes/header.php';
         update();
     }
 
-    // === PREVIEW ENGINE (UPDATED WYSIWYG) ===
+    // === PREVIEW ENGINE ===
     function update() {
-        // 1. GUNAKAN SATUAN MM (Sesuai fisik kertas)
         const w = paperSizeSelect.value === '58mm' ? '58mm' : '80mm';
-        
-        // 2. GUNAKAN SATUAN PX UNTUK FONT (Agar sama dengan print-preview.php)
         const gSize = (globalFontSize.value || 12) + 'px';
+        const gFont = globalFontSelect ? globalFontSelect.value : 'Consolas';
         
-        const gTop = (globalSpacing.value || 0) + 'px';
+        // Margin Logic
+        const mTop = (inputMarginTop.value || 0) + 'px';
+        const mBottom = (inputMarginBottom.value || 0) + 'px';
+        const mLeft = (inputMarginLeft.value || 0) + 'px';
+        const mRight = (inputMarginRight.value || 0) + 'px';
+        
         const lW = (inputLogoWidth.value || 100) + 'px';
         const fW = (inputFooterWidth.value || 100) + 'px';
 
         previewContainer.style.width = w;
-        
-        // Padding top disesuaikan, ditambah padding standar 5mm
-        previewContainer.style.paddingTop = `calc(5mm + ${gTop})`;
+        previewContainer.style.padding = `${mTop} ${mRight} ${mBottom} ${mLeft}`;
+        previewContainer.style.fontFamily = gFont + ', monospace'; 
 
         const lines = editor.value.split('\n');
         let html = '';
@@ -561,43 +659,40 @@ require_once 'includes/header.php';
                 mb: '0px',
                 fw: 'normal', 
                 fst: 'normal', 
-                font: 'Consolas'
+                font: 'inherit' // Inherit from Global unless overridden
             };
 
-            // Parsers Tag
+            // Parsing Tags (Allow Minus)
             let m;
             m = txt.match(/\[F:([^\]]+)\]\s*/); if(m){ st.font = m[1]; txt = txt.replace(m[0],''); }
-            // [UPDATE] Ubah parser size [S:xx] agar menggunakan PX jika tidak ada satuan
             m = txt.match(/\[S:([\d\.]+)\]\s*/); if(m){ st.fs = m[1]+'px'; txt = txt.replace(m[0],''); }
-            
             m = txt.match(/\[LH:([\d\.]+)\]\s*/); if(m){ st.lh = (parseFloat(m[1])/100); txt = txt.replace(m[0],''); }
             m = txt.match(/\[TR:([\d\-\.]+)\]\s*/); if(m){ st.tr = m[1]+'px'; txt = txt.replace(m[0],''); }
             m = txt.match(/\[HS:([\d\.]+)\]\s*/); if(m){ st.scale = (parseFloat(m[1])/100); txt = txt.replace(m[0],''); }
             m = txt.match(/\[BS:([\d\-\.]+)\]\s*/); if(m){ st.base = (-1 * parseFloat(m[1]))+'px'; txt = txt.replace(m[0],''); }
-            m = txt.match(/\[IL:(\d+)\]\s*/); if(m){ st.pl = m[1]+'px'; txt = txt.replace(m[0],''); }
-            m = txt.match(/\[IR:(\d+)\]\s*/); if(m){ st.pr = m[1]+'px'; txt = txt.replace(m[0],''); }
-            m = txt.match(/\[MT:(\d+)\]\s*/); if(m){ st.mt = m[1]+'px'; txt = txt.replace(m[0],''); }
-            m = txt.match(/\[MB:(\d+)\]\s*/); if(m){ st.mb = m[1]+'px'; txt = txt.replace(m[0],''); }
+            m = txt.match(/\[IL:([\-\d]+)\]\s*/); if(m){ st.pl = m[1]+'px'; txt = txt.replace(m[0],''); }
+            m = txt.match(/\[IR:([\-\d]+)\]\s*/); if(m){ st.pr = m[1]+'px'; txt = txt.replace(m[0],''); }
+            m = txt.match(/\[MT:([\-\d]+)\]\s*/); if(m){ st.mt = m[1]+'px'; txt = txt.replace(m[0],''); }
+            m = txt.match(/\[MB:([\-\d]+)\]\s*/); if(m){ st.mb = m[1]+'px'; txt = txt.replace(m[0],''); }
             
-            // Alignment Tags
             if(txt.includes('[C]')) { st.align = 'center'; txt = txt.replace(/\[C\]\s*/,''); }
             else if(txt.includes('[R]') && !txt.includes(' [R] ')) { st.align = 'right'; txt = txt.replace(/\[R\]\s*/,''); }
             else if(txt.includes('[J]')) { st.align = 'justify'; txt = txt.replace(/\[J\]\s*/,''); }
             else if(txt.includes('[L]')) { st.align = 'left'; txt = txt.replace(/\[L\]\s*/,''); }
             
-            // Style Tags
             if(txt.includes('[B]')) { st.fw = 'bold'; txt = txt.replace(/\[B\]\s*/,''); }
             if(txt.includes('[I]')) { st.fst = 'italic'; txt = txt.replace(/\[I\]\s*/,''); }
 
-            // Placeholder Data
             txt = txt.replace(/\{\{.*?\}\}/g, "DATA");
+            
+            // Tab Preview
+            txt = txt.replace(/\[TAB\]/g, '&nbsp;&nbsp;&nbsp;&nbsp;');
+            txt = txt.replace(/\[TAB:(\d+)\]/g, (match, p1) => '&nbsp;'.repeat(parseInt(p1)));
 
             let css = `font-family:'${st.font}', monospace; font-size:${st.fs}; line-height:${st.lh}; letter-spacing:${st.tr}; transform:scale(${st.scale},1); transform-origin:left; position:relative; top:${st.base}; text-align:${st.align}; padding-left:${st.pl}; padding-right:${st.pr}; margin-top:${st.mt}; margin-bottom:${st.mb}; font-weight:${st.fw}; font-style:${st.fst}; display:block; white-space: pre-wrap;`;
 
-            // Render HTML
             if(txt.includes(' [R] ')) {
                 let parts = txt.split(' [R] ');
-                // Tambahkan width:100% agar split mentok kanan kiri kertas
                 html += `<div class="preview-line split-line" style="${css} display:flex; justify-content:space-between; width:100%;"><span>${parts[0]}</span><span>${parts[1]||''}</span></div>`;
             } else if(txt.includes('[LOGO]')) {
                 html += `<div style="text-align:${st.align}; margin-bottom:${st.mb};"><div style="width:${lW}; height:50px; background:#e2e8f0; border:1px dashed #94a3b8; display:inline-flex; align-items:center; justify-content:center; font-size:10px; color:#64748b;">LOGO</div></div>`;

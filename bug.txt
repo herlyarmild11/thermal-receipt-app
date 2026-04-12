@@ -1,0 +1,11 @@
+tag [HS ...], [IL], [IR], [MT], [MD], [LH], [TR], [I], [B], [C], [BS] di print-preview.php
+tambahkan fitur agar bisa memberi jarak spasi di dalam satu baris, contoh pada data item belanja berikut:
+INDOMIE SOTO LMNG 80[TAB BEBERAPA KARAKTER]1[TAB BEBERAPA KARAKTER]3300[TAB BEBERAPA KARAKTER]3,300
+pada tag [TAB BEBERAPA KARAKTER] ini cara kerjanya seperti tombol tab pada microsoft word
+
+
+PERBAIKI NILAI TAG YANG TIDAK BISA MINUS. SEPERTI TAG [MB:-1], SEHARUSNYA TEKS AKAN LEBIH MERAPAT. TETAPI TIDAK ADA YANG TERJADI. INI JUGA TERJADI PADA TAG YANG LAIN SEPERTI TAG [MT], [IL], [IR], [S], [LH], dan [HS]
+kemudian tolong tambahkan fitur margin agar user dapat mengatur margin kertas kanan, kiri, atas, dan bawah.
+
+mengatur jumlah karakter () tidak berfungsi
+mengatur uppercase ^ tidak berfungsi
