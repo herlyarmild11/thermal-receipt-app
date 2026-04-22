@@ -16,11 +16,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     // Config Data
     $logo_width = (int)($_POST['logo_width'] ?? 100);
+    $logo_height = (int)($_POST['logo_height'] ?? 100);
+    $logo_wrap = $_POST['logo_wrap'] ?? 'none';
     $footer_width = (int)($_POST['footer_width'] ?? 100);
+    $footer_height = (int)($_POST['footer_height'] ?? 100);
+    $footer_wrap = $_POST['footer_wrap'] ?? 'none';
     $global_font_size = (int)($_POST['global_font_size'] ?? 12);
-    $font_family = $_POST['font_family'] ?? 'Consolas'; // Global Default Font
+    $font_family = $_POST['font_family'] ?? 'Consolas'; 
     
-    // [BARU] Simpan Margin
+    // Simpan Margin
     $margin_top = (int)($_POST['margin_top'] ?? 0);
     $margin_bottom = (int)($_POST['margin_bottom'] ?? 0);
     $margin_left = (int)($_POST['margin_left'] ?? 0);
@@ -41,11 +45,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'mode' => 'custom', 
             'content' => $custom_content, 
             'logo_width' => $logo_width, 
+            'logo_height' => $logo_height,
+            'logo_wrap' => $logo_wrap,
             'footer_width' => $footer_width, 
+            'footer_height' => $footer_height,
+            'footer_wrap' => $footer_wrap,
             'footer_path' => $existing_structure['footer_path'] ?? null,
             'font_size' => $global_font_size,
             'font_family' => $font_family,
-            // Margin Global
             'margin_top' => $margin_top,
             'margin_bottom' => $margin_bottom,
             'margin_left' => $margin_left,
@@ -118,7 +125,6 @@ require_once 'includes/header.php';
 ?>
 
 <style>
-    /* IMPORT GOOGLE FONTS */
     @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
     @import url('https://fonts.googleapis.com/css2?family=Inconsolata:wght@400;700&display=swap');
 
@@ -160,8 +166,10 @@ require_once 'includes/header.php';
     #editor { flex: 1; width: 100%; padding: 25px; border: none; font-family: 'Consolas', monospace; font-size: 13px; line-height: 1.6; resize: none; outline: none; color: #334155; white-space: pre; overflow-x: auto; }
     .col-preview { background: #e2e8f0; padding: 30px; display: block; overflow-y: auto; text-align: center; }
     .preview-paper { background: white; display: inline-block; text-align: left; min-height: 200px; padding: 5mm; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.2); margin-bottom: 50px; box-sizing: border-box; font-family: 'Consolas', monospace; font-size: 12px; color: #000; white-space: pre-wrap; word-wrap: break-word; transition: width 0.3s; transform-origin: top center; }
-    .preview-line { position: relative; display: block; width: 100%; min-height: 1em; }
-    .split-line { display: flex; justify-content: space-between; }
+    
+    /* [DIHAPUS] width: 100% dan Flexbox dihilangkan agar elemen bisa berdampingan dengan gambar */
+    .preview-line { position: relative; display: block; min-height: 1em; }
+    
     .cs-overlay { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 700px; max-width: 95vw; height: 600px; max-height: 90vh; background: #fff; border: 1px solid #cbd5e1; border-radius: 12px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.3); z-index: 9999; display: none; flex-direction: column; overflow: hidden; }
     .cs-overlay.active { display: flex; animation: fadeIn 0.2s; }
     .cs-header { padding: 15px 20px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; font-weight:700; color:#1e293b; }
@@ -228,13 +236,37 @@ require_once 'includes/header.php';
                 </div>
 
                 <div class="prop-row">
-                    <div class="prop-col"><label class="form-label">Logo (px)</label><div class="input-icon-group"><i class="fas fa-ruler-horizontal input-icon"></i><input type="number" name="logo_width" id="inputLogoWidth" value="<?= $s['logo_width'] ?? 100 ?>" class="form-control input-with-icon"></div></div>
+                    <div class="prop-col"><label class="form-label">Logo W(px)</label><div class="input-icon-group"><i class="fas fa-ruler-horizontal input-icon"></i><input type="number" name="logo_width" id="inputLogoWidth" value="<?= $s['logo_width'] ?? 100 ?>" class="form-control input-with-icon"></div></div>
+                    <div class="prop-col"><label class="form-label">Logo H(px)</label><div class="input-icon-group"><i class="fas fa-arrows-alt-v input-icon"></i><input type="number" name="logo_height" id="inputLogoHeight" value="<?= $s['logo_height'] ?? 100 ?>" class="form-control input-with-icon"></div></div>
                     <div class="prop-col"><label class="form-label">Upload</label><input type="file" name="logo" accept="image/*" class="form-control" style="padding:6px; font-size:0.7rem;"></div>
                 </div>
                 <div class="prop-row">
-                    <div class="prop-col"><label class="form-label">QR (px)</label><div class="input-icon-group"><i class="fas fa-ruler-horizontal input-icon"></i><input type="number" name="footer_width" id="inputFooterWidth" value="<?= $s['footer_width'] ?? 100 ?>" class="form-control input-with-icon"></div></div>
+                    <div class="prop-col">
+                        <label class="form-label">Wrap Text Logo</label>
+                        <select name="logo_wrap" id="inputLogoWrap" class="form-control">
+                            <option value="none" <?= ($s['logo_wrap']??'none')==='none'?'selected':'' ?>>Tidak (Inline / Bisa Center)</option>
+                            <option value="left" <?= ($s['logo_wrap']??'none')==='left'?'selected':'' ?>>Kiri (Teks di Kanan Logo)</option>
+                            <option value="right" <?= ($s['logo_wrap']??'none')==='right'?'selected':'' ?>>Kanan (Teks di Kiri Logo)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="prop-row">
+                    <div class="prop-col"><label class="form-label">QR W(px)</label><div class="input-icon-group"><i class="fas fa-ruler-horizontal input-icon"></i><input type="number" name="footer_width" id="inputFooterWidth" value="<?= $s['footer_width'] ?? 100 ?>" class="form-control input-with-icon"></div></div>
+                    <div class="prop-col"><label class="form-label">QR H(px)</label><div class="input-icon-group"><i class="fas fa-arrows-alt-v input-icon"></i><input type="number" name="footer_height" id="inputFooterHeight" value="<?= $s['footer_height'] ?? 100 ?>" class="form-control input-with-icon"></div></div>
                     <div class="prop-col"><label class="form-label">Upload</label><input type="file" name="footer_logo" accept="image/*" class="form-control" style="padding:6px; font-size:0.7rem;"></div>
                 </div>
+                <div class="prop-row">
+                    <div class="prop-col">
+                        <label class="form-label">Wrap Text QR Code</label>
+                        <select name="footer_wrap" id="inputFooterWrap" class="form-control">
+                            <option value="none" <?= ($s['footer_wrap']??'none')==='none'?'selected':'' ?>>Tidak (Inline / Bisa Center)</option>
+                            <option value="left" <?= ($s['footer_wrap']??'none')==='left'?'selected':'' ?>>Kiri (Teks di Kanan QR)</option>
+                            <option value="right" <?= ($s['footer_wrap']??'none')==='right'?'selected':'' ?>>Kanan (Teks di Kiri QR)</option>
+                        </select>
+                    </div>
+                </div>
+                
                 <div class="prop-row">
                     <div class="prop-col"><label class="form-label">Default Size</label><div class="input-icon-group"><i class="fas fa-text-height input-icon"></i><input type="number" name="global_font_size" id="globalFontSize" value="<?= $s['font_size'] ?? 12 ?>" class="form-control input-with-icon"></div></div>
                 </div>
@@ -340,8 +372,8 @@ require_once 'includes/header.php';
                     <div id="cs-format" class="cs-panel">
                         <table class="code-table">
                             <tr><th>Kode</th><th>Deskripsi</th></tr>
-                            <tr><td><span class="pill">[TAB]</span></td><td><div class="pill-desc">Membuat jarak spasi lebar (4 spasi) di tengah baris.</div></td></tr>
-                            <tr><td><span class="pill">[TAB:8]</span></td><td><div class="pill-desc">Membuat jarak spasi khusus (misal 8 spasi).</div></td></tr>
+                            <tr><td><span class="pill">[TAB]</span></td><td><div class="pill-desc">Membuat jarak spasi ke grid kolom berikutnya layaknya tombol Tab.</div></td></tr>
+                            <tr><td><span class="pill">[W:20]Teks[W]</span></td><td><div class="pill-desc">Memaksa teks memiliki lebar persis 20 karakter agar baris bawahnya bisa lurus sejajar sempurna.</div></td></tr>
                             <tr><td><span class="pill">{{$harga}}</span></td><td><div class="pill-desc">Format angka dengan pemisah ribuan (koma).<br><span class="pill-ex">Input: 50000 -> Cetak: 50,000</span></div></td></tr>
                             <tr><td><span class="pill">{{$$harga}}</span></td><td><div class="pill-desc">Format Rupiah lengkap.<br><span class="pill-ex">Input: 50000 -> Cetak: Rp. 50.000</span></div></td></tr>
                             <tr><td><span class="pill">[B] Teks [B]</span></td><td><div class="pill-desc">Membuat teks menjadi <strong>Tebal (Bold)</strong>.</div></td></tr>
@@ -362,9 +394,6 @@ require_once 'includes/header.php';
                             <tr><td><span class="pill">{{%jam}}</span></td><td><div class="pill-desc">14:30 (Jam:Menit)</div></td></tr>
                             <tr><td><span class="pill">{{%%jam}}</span></td><td><div class="pill-desc">14:30:59 (Full Detik)</div></td></tr>
                         </table>
-                        <div style="padding:10px; background:#f1f5f9; border-radius:6px; margin-top:10px; font-size:0.8rem; color:#64748b;">
-                            <i class="fas fa-info-circle"></i> Jika input dikosongkan, otomatis terisi tanggal/jam saat ini.
-                        </div>
                     </div>
 
                     <div id="cs-advanced" class="cs-panel">
@@ -375,39 +404,9 @@ require_once 'includes/header.php';
                                 <td>
                                     <div class="pill-desc">Memecah teks panjang menjadi beberapa baris secara otomatis dengan indentasi rapi.</div>
                                     <span class="pill-ex">{{ ##100|20|5 catatan }}</span>
-                                    <div style="font-size:0.75rem; color:#64748b; margin-top:5px;">
-                                        • <strong>100</strong>: Panjang max input (untuk dummy)<br>
-                                        • <strong>20</strong>: Potong baris setiap 20 karakter<br>
-                                        • <strong>5</strong>: Jumlah spasi indentasi di baris baru
-                                    </div>
                                 </td>
                             </tr>
                         </table>
-
-                        <div class="code-category">MASKING & PATTERN</div>
-                        <table class="code-table">
-                            <tr>
-                                <td style="width:40%"><span class="pill">{{ ?POLA input }}</span></td>
-                                <td>
-                                    <div class="pill-desc">Membuat ID acak sesuai pola huruf/angka.</div>
-                                    <span class="pill-ex">{{ ?AA-000 kode }}</span>
-                                    <div style="font-size:0.75rem; color:#64748b; margin-top:5px;">
-                                        • <strong>A</strong> = Huruf Acak (A-Z)<br>
-                                        • <strong>0</strong> = Angka Acak (0-9)<br>
-                                        Output: <strong>KF-839</strong>
-                                    </div>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td><span class="pill">{{ #6 kode }}</span></td>
-                                <td><div class="pill-desc">Generate 6 digit <strong>Angka</strong> acak.</div></td>
-                            </tr>
-                            <tr>
-                                <td><span class="pill">{{ ##6 kode }}</span></td>
-                                <td><div class="pill-desc">Generate 6 digit <strong>Huruf & Angka</strong> acak.</div></td>
-                            </tr>
-                        </table>
-
                         <div class="code-category">FORMULA MATEMATIKA</div>
                         <table class="code-table">
                             <tr>
@@ -436,10 +435,15 @@ require_once 'includes/header.php';
     const globalFontSelect = document.getElementById('globalFontSelect');
     
     const inputLogoWidth = document.getElementById('inputLogoWidth');
+    const inputLogoHeight = document.getElementById('inputLogoHeight');
+    const inputLogoWrap = document.getElementById('inputLogoWrap');
+    
     const inputFooterWidth = document.getElementById('inputFooterWidth');
+    const inputFooterHeight = document.getElementById('inputFooterHeight');
+    const inputFooterWrap = document.getElementById('inputFooterWrap');
+    
     const globalFontSize = document.getElementById('globalFontSize');
     
-    // Margin Inputs
     const inputMarginTop = document.getElementById('inputMarginTop');
     const inputMarginBottom = document.getElementById('inputMarginBottom');
     const inputMarginLeft = document.getElementById('inputMarginLeft');
@@ -482,7 +486,6 @@ require_once 'includes/header.php';
     }
     attachInputListeners();
 
-    // === DROPDOWN LOGIC ===
     const fontTrigger = document.getElementById('fontTrigger');
     const fontOptions = document.getElementById('fontOptions');
     
@@ -529,7 +532,6 @@ require_once 'includes/header.php';
         document.getElementById(tabId).classList.add('active');
     }
 
-    // === ENGINE: BLOCK PROCESSOR ===
     function applyBlockTag(key, val = null, fromInput = false) {
         let start = lastSel.start;
         let end = lastSel.end;
@@ -561,7 +563,6 @@ require_once 'includes/header.php';
                 if (currentLine.includes(t)) currentLine = currentLine.replace(t, "");
                 else currentLine = t + currentLine;
             }
-            // Tag Params Logic with Negative Support
             else if (['F','S','LH','TR','HS','BS','IL','IR','MT','MB'].includes(key)) {
                 let regex = new RegExp(`\\[${key}:[^\\]]+\\]\\s*`, 'g');
                 currentLine = currentLine.replace(regex, "");
@@ -622,20 +623,20 @@ require_once 'includes/header.php';
         update();
     }
 
-    // === PREVIEW ENGINE ===
     function update() {
-        const w = paperSizeSelect.value === '58mm' ? '58mm' : '80mm';
+        const w = paperSizeSelect.value === '58mm' ? '48mm' : '72mm'; // DIKUNCI 48mm AGAR TIDAK TERPOTONG MESIN
         const gSize = (globalFontSize.value || 12) + 'px';
         const gFont = globalFontSelect ? globalFontSelect.value : 'Consolas';
         
-        // Margin Logic
         const mTop = (inputMarginTop.value || 0) + 'px';
         const mBottom = (inputMarginBottom.value || 0) + 'px';
         const mLeft = (inputMarginLeft.value || 0) + 'px';
         const mRight = (inputMarginRight.value || 0) + 'px';
         
-        const lW = (inputLogoWidth.value || 100) + 'px';
-        const fW = (inputFooterWidth.value || 100) + 'px';
+        const lW = (inputLogoWidth ? (inputLogoWidth.value || 100) : 100) + 'px';
+        const lH = (inputLogoHeight ? (inputLogoHeight.value || 100) : 100) + 'px';
+        const fW = (inputFooterWidth ? (inputFooterWidth.value || 100) : 100) + 'px';
+        const fH = (inputFooterHeight ? (inputFooterHeight.value || 100) : 100) + 'px';
 
         previewContainer.style.width = w;
         previewContainer.style.padding = `${mTop} ${mRight} ${mBottom} ${mLeft}`;
@@ -647,22 +648,10 @@ require_once 'includes/header.php';
         lines.forEach(line => {
             let txt = line;
             let st = {
-                fs: gSize, 
-                lh: '1.2', 
-                tr: '0px', 
-                scale: '1', 
-                base: '0px', 
-                align: 'left', 
-                pl: '0px', 
-                pr: '0px', 
-                mt: '0px', 
-                mb: '0px',
-                fw: 'normal', 
-                fst: 'normal', 
-                font: 'inherit' // Inherit from Global unless overridden
+                fs: gSize, lh: '1.2', tr: '0px', scale: '1', base: '0px', align: 'left', 
+                pl: '0px', pr: '0px', mt: '0px', mb: '0px', fw: 'normal', fst: 'normal', font: 'inherit'
             };
 
-            // Parsing Tags (Allow Minus)
             let m;
             m = txt.match(/\[F:([^\]]+)\]\s*/); if(m){ st.font = m[1]; txt = txt.replace(m[0],''); }
             m = txt.match(/\[S:([\d\.]+)\]\s*/); if(m){ st.fs = m[1]+'px'; txt = txt.replace(m[0],''); }
@@ -685,24 +674,48 @@ require_once 'includes/header.php';
 
             txt = txt.replace(/\{\{.*?\}\}/g, "DATA");
             
-            // Tab Preview
-            txt = txt.replace(/\[TAB\]/g, '&nbsp;&nbsp;&nbsp;&nbsp;');
+            // Tab Preview (Real Tab Stop)
+            txt = txt.replace(/\[TAB\]/g, '\t');
             txt = txt.replace(/\[TAB:(\d+)\]/g, (match, p1) => '&nbsp;'.repeat(parseInt(p1)));
+            
+            // Fitur Fix Width / Lebar Kolom
+            txt = txt.replace(/\[W:(\d+)\](.*?)\[W\]/g, '<span style="display:inline-block; width:$1ch;">$2</span>');
 
-            let css = `font-family:'${st.font}', monospace; font-size:${st.fs}; line-height:${st.lh}; letter-spacing:${st.tr}; transform:scale(${st.scale},1); transform-origin:left; position:relative; top:${st.base}; text-align:${st.align}; padding-left:${st.pl}; padding-right:${st.pr}; margin-top:${st.mt}; margin-bottom:${st.mb}; font-weight:${st.fw}; font-style:${st.fst}; display:block; white-space: pre-wrap;`;
+            if (txt.includes('[LOGO]')) {
+                const lWrap = inputLogoWrap ? inputLogoWrap.value : 'none';
+                let fC = ''; let mC = 'margin:0 5px;';
+                if (lWrap === 'left') { fC = 'float:left;'; mC = 'margin:0 10px 5px 0;'; }
+                if (lWrap === 'right') { fC = 'float:right;'; mC = 'margin:0 0 5px 10px;'; }
+                
+                let imgPreview = `<div style="width:${lW}; height:${lH}; background:#e2e8f0; border:1px dashed #94a3b8; display:inline-flex; align-items:center; justify-content:center; font-size:10px; color:#64748b; vertical-align:top; ${fC} ${mC}">LOGO</div>`;
+                txt = txt.replace(/\[LOGO\]/g, imgPreview);
+            }
+            if (txt.includes('[QR]')) {
+                const fWrap = inputFooterWrap ? inputFooterWrap.value : 'none';
+                let fC = ''; let mC = 'margin:0 5px;';
+                if (fWrap === 'left') { fC = 'float:left;'; mC = 'margin:0 10px 5px 0;'; }
+                if (fWrap === 'right') { fC = 'float:right;'; mC = 'margin:0 0 5px 10px;'; }
 
+                let qrPreview = `<div style="width:${fW}; height:${fH}; background:#e2e8f0; border:1px dashed #94a3b8; display:inline-flex; align-items:center; justify-content:center; font-size:10px; color:#64748b; vertical-align:top; ${fC} ${mC}">QR</div>`;
+                txt = txt.replace(/\[QR\]/g, qrPreview);
+            }
+
+            // Hapus transform jika skala 1, karena transform memblokir float/wrap
+            let transformCss = (st.scale != 1) ? `transform:scale(${st.scale},1); transform-origin:left;` : '';
+            let css = `font-family:'${st.font}', monospace; font-size:${st.fs}; line-height:${st.lh}; letter-spacing:${st.tr}; ${transformCss} position:relative; top:${st.base}; text-align:${st.align}; padding-left:${st.pl}; padding-right:${st.pr}; margin-top:${st.mt}; margin-bottom:${st.mb}; font-weight:${st.fw}; font-style:${st.fst}; display:block; white-space: pre-wrap; tab-size: 4; -moz-tab-size: 4;`;
+
+            // [BUG FIX]: Hapus flexbox, pakai float left untuk memecah teks
             if(txt.includes(' [R] ')) {
                 let parts = txt.split(' [R] ');
-                html += `<div class="preview-line split-line" style="${css} display:flex; justify-content:space-between; width:100%;"><span>${parts[0]}</span><span>${parts[1]||''}</span></div>`;
-            } else if(txt.includes('[LOGO]')) {
-                html += `<div style="text-align:${st.align}; margin-bottom:${st.mb};"><div style="width:${lW}; height:50px; background:#e2e8f0; border:1px dashed #94a3b8; display:inline-flex; align-items:center; justify-content:center; font-size:10px; color:#64748b;">LOGO</div></div>`;
-            } else if(txt.includes('[QR]')) {
-                html += `<div style="text-align:${st.align}; margin-bottom:${st.mb};"><div style="width:${fW}; height:${fW}; background:#e2e8f0; border:1px dashed #94a3b8; display:inline-flex; align-items:center; justify-content:center; font-size:10px; color:#64748b;">QR</div></div>`;
+                html += `<div class="preview-line" style="${css} text-align:right;"><span style="float:left;">${parts[0]}</span>${parts[1]||''}</div>`;
             } else {
                 html += `<div class="preview-line" style="${css}">${txt || '&nbsp;'}</div>`;
             }
         });
-
+        
+        // [BUG FIX]: Clearfix di akhir looping agar QR code/logo tidak bocor ke bawah
+        html += '<div style="clear:both;"></div>';
+        
         previewContainer.innerHTML = html;
     }
 

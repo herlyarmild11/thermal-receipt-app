@@ -217,9 +217,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 flatpickr.localize(flatpickr.l10ns.id); 
                 document.querySelectorAll('.time-picker-modern').forEach(i => flatpickr(i, {enableTime:true, noCalendar:true, dateFormat: i.dataset.enableSeconds==='true'?"H:i:S":"H:i", time_24hr:true, enableSeconds:i.dataset.enableSeconds==='true', onChange:calculateAll}));
                 document.querySelectorAll('.date-picker-modern').forEach(i => {
-                    let c = {dateFormat: i.dataset.pickerFmt||'Y-m-d', allowInput:true, onChange:calculateAll};
-                    if(i.dataset.useMonth==='true') c.plugins=[new monthSelectPlugin({shorthand:true, dateFormat:c.dateFormat, altFormat:c.dateFormat, theme:"light"})];
-                    if(!i.value) i.value=flatpickr.formatDate(new Date(), c.dateFormat);
+                    let formatTampilan = i.dataset.pickerFmt || 'Y-m-d';
+                    let c = {
+                        dateFormat: 'Y-m-d',
+                        altInput: true,
+                        altFormat: formatTampilan,
+                        allowInput: true, 
+                        onChange: calculateAll
+                    };
+                    if(i.dataset.useMonth==='true') c.plugins=[new monthSelectPlugin({shorthand:true, dateFormat:'Y-m-d', altFormat:formatTampilan, theme:"light"})];
+                    if(!i.value) i.value=flatpickr.formatDate(new Date(), 'Y-m-d');
                     flatpickr(i, c);
                 });
                 calculateAll();
@@ -270,7 +277,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $structure = json_decode($template['structure'], true, 512, JSON_THROW_ON_ERROR);
 $content = $structure['content'] ?? '';
 $logo_width = $structure['logo_width'] ?? 100;
+$logo_height = $structure['logo_height'] ?? 100;
+$logo_wrap = $structure['logo_wrap'] ?? 'none';
 $footer_width = $structure['footer_width'] ?? 100;
+$footer_height = $structure['footer_height'] ?? 100;
+$footer_wrap = $structure['footer_wrap'] ?? 'none';
 $global_font_size = $structure['font_size'] ?? 12;
 $font_family = $structure['font_family'] ?? 'Consolas';
 $margin_top = $structure['margin_top'] ?? 0;
@@ -333,7 +344,8 @@ $content = preg_replace_callback($pattern, function($matches) use ($receipt_data
         if ($chunk_len > 0) {
             $parts = str_split($val, $chunk_len);
             $formatted = array_shift($parts);
-            foreach ($parts as $p) $formatted .= "\n" . str_repeat(" ", $indent_len) . $p;
+            // Ganti " " menjadi "&nbsp;" di bawah ini
+            foreach ($parts as $p) $formatted .= "\n" . str_repeat("&nbsp;", $indent_len) . $p;
             return $formatted;
         }
     }
@@ -389,10 +401,9 @@ $footerUrl = (!empty($structure['footer_path']) && file_exists($structure['foote
             } 
             .no-print { display: none !important; } 
         }
-        .print-line { display: block; width: 100%; white-space: pre-wrap; word-wrap: break-word; position: relative; z-index: 1; overflow: visible; min-height: 1em; }
-        .split-line { display: flex; justify-content: space-between; width: 100%; }
+        .print-line { display: block; white-space: pre-wrap; word-wrap: break-word; position: relative; z-index: 1; overflow: visible; min-height: 1em; tab-size: 4; -moz-tab-size: 4; }
+        .split-line { display: flex; justify-content: space-between; }
         .text-layer { position: relative; z-index: 2; }
-        .img-absolute { position: absolute; top: 0; z-index: 0; opacity: 1; filter: grayscale(100%) contrast(200%); image-rendering: pixelated; }
     </style>
 </head>
 <body>
@@ -475,7 +486,6 @@ $footerUrl = (!empty($structure['footer_path']) && file_exists($structure['foote
                 $finalContent = str_replace('[I]', '', $finalContent);
             }
 
-            // PENTING: Trim agar spasi sisa tag tidak mengganggu deteksi [C]
             $finalContent = trim($finalContent);
 
             // Parsing Alignment
@@ -499,12 +509,15 @@ $footerUrl = (!empty($structure['footer_path']) && file_exists($structure['foote
                 $textAlign = 'left'; $finalContent = substr($finalContent, 3); 
             }
 
-            // Proses TAB di konten utama & pecahan split
+            // Proses TAB & Fix Width
             $processTabs = function($text) {
-                $text = str_replace('[TAB]', str_repeat("&nbsp;", 4), $text);
+                // Real Tab Stop
+                $text = str_replace('[TAB]', "\t", $text);
                 $text = preg_replace_callback('/\[TAB:(\d+)\]/', function($m) {
                     return str_repeat("&nbsp;", intval($m[1]));
                 }, $text);
+                // Fitur Fix Width Kolom [W:..]
+                $text = preg_replace('/\[W:(\d+)\](.*?)\[W\]/', '<span style="display:inline-block; width:$1ch;">$2</span>', $text);
                 return $text;
             };
 
@@ -520,37 +533,43 @@ $footerUrl = (!empty($structure['footer_path']) && file_exists($structure['foote
                 $cssString .= "$prop:$val; ";
             }
 
-            $generateImg = function($url, $width, $lineStr, $tag) {
-                $len = strlen($lineStr);
-                $pos = strpos($lineStr, $tag);
-                $realLen = ($len > strlen($tag)) ? ($len - strlen($tag)) : 1;
-                $percent = ($pos / $realLen) * 100;
-                if ($percent < 0) $percent = 0; if ($percent > 100) $percent = 100;
-                $translateX = $percent * -1;
-                return ['html' => '<img src="' . $url . '" class="img-absolute" style="width:' . $width . 'px; left:' . $percent . '%; transform: translate(' . $translateX . '%, -10%);">', 'clean' => str_replace($tag, '', $lineStr)];
-            };
-            
-            $imgHtml = '';
-            if (strpos($finalContent, '[LOGO]') !== false && $logoUrl) {
-                $res = $generateImg($logoUrl, $logo_width, $finalContent, '[LOGO]');
-                $imgHtml .= $res['html']; $finalContent = $res['clean'];
-            }
-            if (strpos($finalContent, '[QR]') !== false && $footerUrl) {
-                $res = $generateImg($footerUrl, $footer_width, $finalContent, '[QR]');
-                $imgHtml .= $res['html']; $finalContent = $res['clean'];
-            }
+            // Fungsi render gambar inline agar patuh dengan [C] atau Wrap Text
+            $renderInlineImages = function($text) use ($logoUrl, $logo_width, $logo_height, $logo_wrap, $footerUrl, $footer_width, $footer_height) {
+                if (strpos($text, '[LOGO]') !== false && $logoUrl) {
+                    $fC = ''; $mC = 'margin:0 5px;';
+                    if ($logo_wrap === 'left') { $fC = 'float:left;'; $mC = 'margin:0 10px 5px 0;'; }
+                    if ($logo_wrap === 'right') { $fC = 'float:right;'; $mC = 'margin:0 0 5px 10px;'; }
 
-            if (trim($finalContent) === '' && $imgHtml === '' && !$isSplit) {
-                echo '<div class="print-line" style="'.$cssString.'">&nbsp;</div>';
+                    $imgHtml = '<img src="' . $logoUrl . '" style="width:' . $logo_width . 'px; height:' . $logo_height . 'px; display:inline-block; vertical-align:top; filter:grayscale(100%) contrast(200%); image-rendering:pixelated; ' . $fC . ' ' . $mC . '">';
+                    $text = str_replace('[LOGO]', $imgHtml, $text);
+                }
+                if (strpos($text, '[QR]') !== false && $footerUrl) {
+                    $ffC = ''; $fmC = 'margin:0 5px;';
+                    if ($footer_wrap === 'left') { $ffC = 'float:left;'; $fmC = 'margin:0 10px 5px 0;'; }
+                    if ($footer_wrap === 'right') { $ffC = 'float:right;'; $fmC = 'margin:0 0 5px 10px;'; }
+
+                    $imgHtml = '<img src="' . $footerUrl . '" style="width:' . $footer_width . 'px; height:' . $footer_height . 'px; display:inline-block; vertical-align:top; filter:grayscale(100%) contrast(200%); image-rendering:pixelated; ' . $ffC . ' ' . $fmC . '">';
+                    $text = str_replace('[QR]', $imgHtml, $text);
+                }
+                return $text;
+            };
+
+            if ($isSplit) {
+                $leftText = $renderInlineImages($leftText);
+                $rightText = $renderInlineImages($rightText);
+                echo '<div class="print-line split-line" style="'.$cssString.'"><span>'.$leftText.'</span><span>'.$rightText.'</span></div>';
             } else {
-                if ($isSplit) {
-                    echo '<div class="print-line split-line" style="'.$cssString.'"><span>'.$leftText.'</span><span>'.$rightText.'</span>'.$imgHtml.'</div>';
+                $finalContent = $renderInlineImages($finalContent);
+                // Cek kosong (hindari deteksi tag img palsu sebagai baris kosong)
+                if (trim(strip_tags($finalContent)) === '' && strpos($finalContent, '<img') === false) {
+                    echo '<div class="print-line" style="'.$cssString.'">&nbsp;</div>';
                 } else {
-                    echo '<div class="print-line" style="'.$cssString.' text-align:'.$textAlign.';">'.$imgHtml.'<span class="text-layer">'.$finalContent.'</span></div>';
+                    echo '<div class="print-line" style="'.$cssString.' text-align:'.$textAlign.';"><span class="text-layer">'.$finalContent.'</span></div>';
                 }
             }
         }
         ?>
+        <div style="clear:both;"></div>
         <div style="height: 3mm;"></div>
     </div>
     <div class="no-print">
