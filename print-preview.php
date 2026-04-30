@@ -44,7 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $structure = json_decode($template['structure'], true);
     $content = $structure['content'] ?? '';
     
-    $pattern = '/\{\{\s*(?<hidden>!)?(?:\s*\[(?<sort>\d+)\])?(?:\s*(?:(?<cur>\${1,2})|(?<hash>\#{1,2})(?<hash_conf>[0-9\|]+(?:[:]\d+[-]\d+)?)?|(?<date>\@{1,3})(?::(?<date_fmt>[dmyDMY]+))?|(?<time>\%{1,4})|(?<patt>\?)(?<patt_conf>[a-zA-Z0-9\-\/\.]+)))?(?<case_pre>[\^_\*])?(?:\((?<maxlen>\d+)\))?(?<case_post>[\^_\*])?(?:\[)?(?<name>[a-zA-Z0-9_]+)(?:\])?(?:\s*=\s*(?<formula>.+?))?\s*\}\}/';
+    $pattern = '/\{\{\s*(?<hidden>!)?(?:\s*\[(?<sort>\d+)\])?(?:\s*(?:(?<cur>\${1,2})|(?<hash>\#{1,2})(?<hash_conf>[0-9\|]+(?:[:]\d+[-]\d+)?)?|(?<date>\@{1,3})(?::(?<date_fmt>[dmyDMY]+))?|(?<time>\%{1,4})|(?<patt>\?)(?<patt_conf>[a-zA-Z0-9\-\/\.]+)))?(?<case_pre>[\^_\*])?(?:\[)?(?<name>[a-zA-Z0-9_]+)(?:\])?(?:\((?<maxlen>\d+)\))?(?<case_post>[\^_\*])?(?:\s*=\s*(?<formula>.+?))?\s*\}\}/';
     preg_match_all($pattern, $content, $matches, PREG_SET_ORDER);
     
     $defined_fields = [];
@@ -289,7 +289,7 @@ $margin_bottom = $structure['margin_bottom'] ?? 0;
 $margin_left = $structure['margin_left'] ?? 0;
 $margin_right = $structure['margin_right'] ?? 0;
 
-$pattern = '/\{\{\s*(?<hidden>!)?(?:\s*\[(?<sort>\d+)\])?(?:\s*(?:(?<cur>\${1,2})|(?<hash>\#{1,2})(?<hash_conf>[0-9\|]+(?:[:]\d+[-]\d+)?)?|(?<date>\@{1,3})(?::(?<date_fmt>[dmyDMY]+))?|(?<time>\%{1,4})|(?<patt>\?)(?<patt_conf>[a-zA-Z0-9\-\/\.]+)))?(?<case_pre>[\^_\*])?(?:\((?<maxlen>\d+)\))?(?<case_post>[\^_\*])?(?:\[)?(?<name>[a-zA-Z0-9_]+)(?:\])?(?:\s*=\s*(?<formula>.+?))?\s*\}\}/';
+$pattern = '/\{\{\s*(?<hidden>!)?(?:\s*\[(?<sort>\d+)\])?(?:\s*(?:(?<cur>\${1,2})|(?<hash>\#{1,2})(?<hash_conf>[0-9\|]+(?:[:]\d+[-]\d+)?)?|(?<date>\@{1,3})(?::(?<date_fmt>[dmyDMY]+))?|(?<time>\%{1,4})|(?<patt>\?)(?<patt_conf>[a-zA-Z0-9\-\/\.]+)))?(?<case_pre>[\^_\*])?(?:\[)?(?<name>[a-zA-Z0-9_]+)(?:\])?(?:\((?<maxlen>\d+)\))?(?<case_post>[\^_\*])?(?:\s*=\s*(?<formula>.+?))?\s*\}\}/';
 
 $content = preg_replace_callback($pattern, function($matches) use ($receipt_data) {
     $key = $matches['name'] ?? '';
@@ -376,13 +376,13 @@ $footerUrl = (!empty($structure['footer_path']) && file_exists($structure['foote
             color: black; 
             background: white; 
         }
-        @media screen { body { background: #555; padding: 40px 0; display: flex; flex-direction: column; align-items: center; min-height: 100vh; } .receipt { background: white; width: <?= $paper_size === '58mm' ? '58mm' : '80mm' ?>; padding: 5mm; box-shadow: 0 0 15px rgba(0,0,0,0.5); margin-bottom: 20px; min-height: 100px; } .no-print { text-align: center; margin-top: 20px; } }
+        @media screen { body { background: #555; padding: 40px 0; display: flex; flex-direction: column; align-items: center; min-height: 100vh; } .receipt { background: white; width: <?= $paper_size === '58mm' ? '58mm' : '80mm' ?>; padding: 5mm; box-sizing: border-box; box-shadow: 0 0 15px rgba(0,0,0,0.5); margin-bottom: 20px; min-height: 100px; } .no-print { text-align: center; margin-top: 20px; } }
         
         .receipt {
-            padding-top: <?= $margin_top ?>px !important;
-            padding-bottom: <?= $margin_bottom ?>px !important;
-            padding-left: <?= $margin_left ?>px !important;
-            padding-right: <?= $margin_right ?>px !important;
+            margin-top: <?= $margin_top ?>px !important;
+            margin-bottom: <?= $margin_bottom ?>px !important;
+            margin-left: <?= $margin_left ?>px !important;
+            margin-right: <?= $margin_right ?>px !important;
         }
 
         @media print { 
@@ -392,12 +392,12 @@ $footerUrl = (!empty($structure['footer_path']) && file_exists($structure['foote
             html, body { width: 100%; height: 100%; margin: 0 !important; padding: 0 !important; background: white; overflow: hidden; } 
             .receipt { 
                 position: absolute; left: 0; top: 0; width: <?= $content_width ?>; 
-                margin: 0; border: none; box-shadow: none; font-weight: bold; 
+                border: none; box-shadow: none; font-weight: bold;
                 -webkit-print-color-adjust: exact; print-color-adjust: exact; 
-                padding-top: <?= $margin_top ?>px !important;
-                padding-bottom: <?= $margin_bottom ?>px !important;
-                padding-left: <?= $margin_left ?>px !important;
-                padding-right: <?= $margin_right ?>px !important;
+                margin-top: <?= $margin_top ?>px !important;
+                margin-bottom: <?= $margin_bottom ?>px !important;
+                margin-left: <?= $margin_left ?>px !important;
+                margin-right: <?= $margin_right ?>px !important;
             } 
             .no-print { display: none !important; } 
         }
@@ -439,16 +439,16 @@ $footerUrl = (!empty($structure['footer_path']) && file_exists($structure['foote
                 $lineStyle['font-family'] = "'" . $matches[1] . "', monospace"; 
                 $finalContent = str_replace($matches[0], '', $finalContent);
             }
-            if (preg_match('/\[S:([\d\.]+)\]/', $finalContent, $matches)) {
+            if (preg_match('/\[S:([\-\d\.]+)\]/', $finalContent, $matches)) {
                 $lineStyle['font-size'] = $matches[1] . 'px';
                 $finalContent = str_replace($matches[0], '', $finalContent);
             }
-            if (preg_match('/\[HS:([\d\.]+)\]/', $finalContent, $matches)) {
+            if (preg_match('/\[HS:([\-\d\.]+)\]/', $finalContent, $matches)) {
                 $scale = floatval($matches[1]) / 100;
                 $lineStyle['transform'] = "scale($scale, 1)";
                 $finalContent = str_replace($matches[0], '', $finalContent);
             }
-            if (preg_match('/\[LH:([\d\.]+)\]/', $finalContent, $matches)) {
+            if (preg_match('/\[LH:([\-\d\.]+)\]/', $finalContent, $matches)) {
                 $lineStyle['line-height'] = floatval($matches[1]) / 100;
                 $finalContent = str_replace($matches[0], '', $finalContent);
             }
@@ -513,8 +513,10 @@ $footerUrl = (!empty($structure['footer_path']) && file_exists($structure['foote
             $processTabs = function($text) {
                 // Real Tab Stop
                 $text = str_replace('[TAB]', "\t", $text);
-                $text = preg_replace_callback('/\[TAB:(\d+)\]/', function($m) {
-                    return str_repeat("&nbsp;", intval($m[1]));
+                $text = preg_replace_callback('/\[TAB\s*(.*?)\]/', function($m) {
+                    if (trim($m[1]) === '') return "\t";
+                    if (strpos($m[1], ':') === 0) return str_repeat("&nbsp;", intval(substr($m[1], 1)));
+                    return "<span style='display:inline-block; width:" . strlen($m[1]) . "ch;'></span>";
                 }, $text);
                 // Fitur Fix Width Kolom [W:..]
                 $text = preg_replace('/\[W:(\d+)\](.*?)\[W\]/', '<span style="display:inline-block; width:$1ch;">$2</span>', $text);
