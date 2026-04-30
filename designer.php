@@ -654,10 +654,10 @@ require_once 'includes/header.php';
 
             let m;
             m = txt.match(/\[F:([^\]]+)\]\s*/); if(m){ st.font = m[1]; txt = txt.replace(m[0],''); }
-            m = txt.match(/\[S:([\d\.]+)\]\s*/); if(m){ st.fs = m[1]+'px'; txt = txt.replace(m[0],''); }
-            m = txt.match(/\[LH:([\d\.]+)\]\s*/); if(m){ st.lh = (parseFloat(m[1])/100); txt = txt.replace(m[0],''); }
+            m = txt.match(/\[S:([\-\d\.]+)\]\s*/); if(m){ st.fs = m[1]+'px'; txt = txt.replace(m[0],''); }
+            m = txt.match(/\[LH:([\-\d\.]+)\]\s*/); if(m){ st.lh = (parseFloat(m[1])/100); txt = txt.replace(m[0],''); }
             m = txt.match(/\[TR:([\d\-\.]+)\]\s*/); if(m){ st.tr = m[1]+'px'; txt = txt.replace(m[0],''); }
-            m = txt.match(/\[HS:([\d\.]+)\]\s*/); if(m){ st.scale = (parseFloat(m[1])/100); txt = txt.replace(m[0],''); }
+            m = txt.match(/\[HS:([\-\d\.]+)\]\s*/); if(m){ st.scale = (parseFloat(m[1])/100); txt = txt.replace(m[0],''); }
             m = txt.match(/\[BS:([\d\-\.]+)\]\s*/); if(m){ st.base = (-1 * parseFloat(m[1]))+'px'; txt = txt.replace(m[0],''); }
             m = txt.match(/\[IL:([\-\d]+)\]\s*/); if(m){ st.pl = m[1]+'px'; txt = txt.replace(m[0],''); }
             m = txt.match(/\[IR:([\-\d]+)\]\s*/); if(m){ st.pr = m[1]+'px'; txt = txt.replace(m[0],''); }
@@ -676,7 +676,11 @@ require_once 'includes/header.php';
             
             // Tab Preview (Real Tab Stop)
             txt = txt.replace(/\[TAB\]/g, '\t');
-            txt = txt.replace(/\[TAB:(\d+)\]/g, (match, p1) => '&nbsp;'.repeat(parseInt(p1)));
+            txt = txt.replace(/\[TAB\s*(.*?)\]/g, (match, p1) => {
+                if (p1.trim() === '') return '\t';
+                if (p1.startsWith(':')) return '&nbsp;'.repeat(parseInt(p1.substring(1)));
+                return `<span style="display:inline-block; width:${p1.length}ch;"></span>`;
+            });
             
             // Fitur Fix Width / Lebar Kolom
             txt = txt.replace(/\[W:(\d+)\](.*?)\[W\]/g, '<span style="display:inline-block; width:$1ch;">$2</span>');
